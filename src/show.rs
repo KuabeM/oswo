@@ -1,26 +1,80 @@
-use color_eyre::Result;
-use swayipc::Connection;
+use std::ops::{Deref, DerefMut};
 
-#[derive(Debug)]
-struct Output {
+use color_eyre::Result;
+use swayipc::{Connection, Mode};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Output {
     name: String,
     model: String,
     position: (i32, i32),
     resolution: (u32, u32),
+    modes: Vec<Mode>,
 }
 
 impl Output {
-    fn new(name: String, model: String, position: (i32, i32), resolution: (u32, u32)) -> Self {
+    /// Creates a new [`Output`].
+    fn new(
+        name: String,
+        model: String,
+        position: (i32, i32),
+        resolution: (u32, u32),
+        modes: Vec<Mode>,
+    ) -> Self {
         Self {
             name,
             model,
             position,
             resolution,
+            modes,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+
+    fn display(&self, verbose: bool, name_pad: usize) -> String {
+        // we want at least one whitespace, hence + 1
+        let pad = name_pad.saturating_sub(self.name.len()) + 1;
+        let modes = self.modes.iter().fold(String::new(), |mut acc, m| {
+            let refresh = m.refresh as f32 / 1000.0;
+            acc = acc + ", " + &format!("{}x{} ({} Hz)", m.width, m.height, refresh);
+            acc
+        });
+
+        let details = if verbose {
+            ", model: ".to_string() + self.model.as_str() + ", modes: " + &modes
+        } else {
+            "".to_string()
+        };
+        format!(
+            "{}:{:0pad$}position: {:4}/{}, resolution: {}x{}{}",
+            self.name,
+            " ",
+            self.position.0,
+            self.position.1,
+            self.resolution.0,
+            self.resolution.1,
+            details
+        )
+    }
+
+    pub fn best_mode(&'_ self) -> Option<&'_ Mode> {
+        self.modes
+            .iter()
+            .max_by_key(|mode| mode.width * mode.height)
     }
 }
 
-#[derive(Debug)]
+impl std::fmt::Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let fmt = self.display(false, 0);
+        write!(f, "{}", fmt)
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Outputs(Vec<Output>);
 
 impl Outputs {
@@ -29,19 +83,19 @@ impl Outputs {
 
         let outputs = raw_outputs
             .iter()
-            .filter(|o| o.active)
             .map(|o| {
                 let resolution = o
                     .current_mode
-                    .and_then(|m| Some((m.width as u32, m.height as u32)))
+                    .map(|m| (m.width as u32, m.height as u32))
                     .unwrap_or((0, 0));
-                let output = Output::new(
+                let model = o.make.clone() + " " + &o.model;
+                Output::new(
                     o.name.clone(),
-                    o.model.clone(),
+                    model,
                     (o.rect.x, o.rect.y),
                     resolution,
-                );
-                output
+                    o.modes.clone(),
+                )
             })
             .collect();
 
@@ -54,16 +108,49 @@ impl Outputs {
             .iter()
             .fold(0, |len, output| len.max(output.name.len()))
     }
-}
 
-impl Output {
-    fn display(&self, verbose: bool, name_pad: usize) -> String {
-        // we want at least one whitespace, hence + 1
-        let pad = name_pad - self.name.len() + 1;
-        format!(
-            "{}:{:0pad$}position: {:4}/{:4}, resolution: {}x{}",
-            self.name, " ", self.position.0, self.position.1, self.resolution.0, self.resolution.1
-        )
+    pub fn set(&self, setup: &[String]) -> Result<()> {
+        let setup: Vec<String> = setup.iter().map(|s| s.to_lowercase()).collect();
+        let desired: Outputs = setup
+            .iter()
+            .filter_map(|s| {
+                if let Some(o) = self.iter().find(|o| o.name().to_lowercase() == *s) {
+                    Some(o)
+                } else {
+                    println!("Display {} not connected", s);
+                    None
+                }
+            })
+            .collect();
+
+        let mut cmd_con = swayipc::Connection::new()?;
+        for o in self
+            .iter()
+            .filter(|o| !setup.contains(&o.name().to_string().to_lowercase()))
+        {
+            let payload = format!("output {} disable", o.name());
+            cmd_con.run_command(payload)?;
+        }
+
+        let desired_modes: Vec<Option<&swayipc::Mode>> =
+            desired.iter().map(|o| o.best_mode()).collect();
+
+        let mut last_x = 0;
+        for (output, mode) in desired.iter().zip(desired_modes) {
+            let (width, height) = mode.map(|m| (m.width, m.height)).unwrap_or((0, 0));
+            let payload = format!(
+                "output {} enable position {} 0 resolution {}x{}",
+                output.name(),
+                last_x,
+                width,
+                height
+            );
+            last_x += width;
+            println!("{payload}");
+            cmd_con.run_command(payload)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -77,14 +164,45 @@ impl std::fmt::Display for Outputs {
     }
 }
 
+impl Deref for Outputs {
+    type Target = Vec<Output>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Outputs {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<'a> FromIterator<&'a Output> for Outputs {
+    fn from_iter<T: IntoIterator<Item = &'a Output>>(iter: T) -> Self {
+        let mut vec: Vec<Output> = Vec::new();
+        for n in iter {
+            vec.push(n.clone());
+        }
+
+        Self(vec)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn padding() {
-        let output = Output::new("1234".to_owned(), (0, 0), (0, 0));
-        let display = output.display(8);
+        let output = Output::new(
+            "1234".to_owned(),
+            "model".to_owned(),
+            (0, 0),
+            (0, 0),
+            Vec::new(),
+        );
+        let display = output.display(false, 8);
         assert_eq!(&display[..10], "1234:     ");
     }
 }

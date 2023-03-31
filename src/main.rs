@@ -9,22 +9,30 @@ mod show;
 struct Args {
     /// Show current configuration
     #[command(subcommand)]
-    cmds: Option<Cmds>,
+    cmds: Cmds,
+    /// Verbosity of output
+    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
+    verbose: u8,
 }
 
 #[derive(Subcommand, Debug)]
 enum Cmds {
-    Show
+    Show,
+    Set {
+        /// Setup of outputs
+        setup: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
 
-    if let Some(sub) = args.cmds {
-        match sub {
-            Cmds::Show => println!("{}", show::Outputs::list()?),
-        }
+    let outputs = show::Outputs::list()?;
+    match args.cmds {
+        Cmds::Show if args.verbose == 0 => println!("{}", outputs),
+        Cmds::Show => println!("{:#}", outputs),
+        Cmds::Set { setup } => outputs.set(&setup)?,
     }
 
     Ok(())
