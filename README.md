@@ -1,0 +1,2 @@
+# OSWO - organize sway outputs
+
