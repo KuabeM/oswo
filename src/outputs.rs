@@ -109,6 +109,28 @@ impl Outputs {
             .fold(0, |len, output| len.max(output.name.len()))
     }
 
+    fn get_name_from_model<'a, 'b>(&'a self, model: &'a str) -> Option<&'a str>
+    where
+        'a: 'b,
+    {
+        self.0
+            .iter()
+            .find(|e| e.model.contains(model))
+            .map(|o| o.name.as_ref())
+    }
+
+    pub fn set_models(&self, setup: &[String]) -> Result<()> {
+        let names: Vec<String> = setup
+            .iter()
+            .map(|model| {
+                self.get_name_from_model(model)
+                    .map(|n| n.to_string())
+                    .ok_or_else(|| color_eyre::eyre::eyre!("Failed to find name of '{}'", model))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        self.set(&names)
+    }
+
     pub fn set(&self, setup: &[String]) -> Result<()> {
         let setup: Vec<String> = setup.iter().map(|s| s.to_lowercase()).collect();
         let desired: Outputs = setup

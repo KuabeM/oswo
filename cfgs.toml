@@ -1,0 +1,12 @@
+[alone]
+outputs = ["LG Display"]
+
+[home]
+outputs = [ "DP-3", "LG Display" ]
+
+[office]
+outputs = [ "DP-5", "DP-6" ]
+
+[tv]
+outputs = [ "LG Display", "HDMI-A-2" ]
+

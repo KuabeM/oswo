@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use color_eyre::Result;
+use color_eyre::{eyre::{Context, self}, Result};
 
 mod cfg;
 mod outputs;
@@ -35,8 +35,8 @@ enum Cmds {
         /// Name of predefined configuration.
         config: String,
         /// Path to toml file containing predefined configurations.
-        #[arg(short, long)]
-        cfg_file: Option<PathBuf>,
+        #[arg(short, long, default_value = "~/.config/oswo.toml")]
+        cfg_file: PathBuf,
     },
 }
 
@@ -44,19 +44,17 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
 
-    let cfg = std::fs::read_to_string("./cfgs.toml")?
-        .parse::<toml::Table>()
-        .unwrap();
-
     let outputs = outputs::Outputs::list()?;
     match args.cmds {
         Cmds::Display if args.verbose == 0 => println!("{}", outputs),
         Cmds::Display => println!("{:#}", outputs),
         Cmds::Set { setup } => outputs.set(&setup)?,
         Cmds::Use { config, cfg_file } => {
-            let path = cfg_file.unwrap_or_else(|| "~/.config/oswo.toml".into());
-            let cfg_str = std::fs::read_to_string(path)?;
-            let cfgs: cfg::Cfgs = toml::from_str(cfg_str);
+            let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
+            let desired_outputs = cfgs
+                .find(&config)
+                .ok_or_else(|| eyre::eyre!("Found no setup for '{}'", config))?;
+            outputs.set_models(desired_outputs)?;
         }
     }
 
