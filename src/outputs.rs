@@ -39,23 +39,26 @@ impl Output {
         let pad = name_pad.saturating_sub(self.name.len()) + 1;
         let modes = self.modes.iter().fold(String::new(), |mut acc, m| {
             let refresh = m.refresh as f32 / 1000.0;
-            acc = acc + ", " + &format!("{}x{} ({} Hz)", m.width, m.height, refresh);
+            acc = acc
+                + ", "
+                + &format!("{}x{} ({} Hz)", m.width, m.height, refresh);
             acc
         });
 
         let details = if verbose {
-            ", model: ".to_string() + self.model.as_str() + ", modes: " + &modes
+            ", modes: ".to_string() + &modes
         } else {
             "".to_string()
         };
+        let resolution = format!("{}x{}", self.resolution.0, self.resolution.1);
         format!(
-            "{}:{:0pad$}position: {:4}/{}, resolution: {}x{}{}",
+            "{}:{:0pad$}position: {:4}/{}, resolution: {:>9}, model: {}{}",
             self.name,
             " ",
             self.position.0,
             self.position.1,
-            self.resolution.0,
-            self.resolution.1,
+            resolution,
+            self.model.as_str(),
             details
         )
     }
