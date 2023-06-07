@@ -147,6 +147,9 @@ impl Outputs {
                 }
             })
             .collect();
+        if desired.is_empty() {
+            color_eyre::eyre::bail!("No display to be set is connected");
+        }
 
         let mut cmd_con = swayipc::Connection::new()?;
         for o in self
