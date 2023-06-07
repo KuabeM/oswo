@@ -1,12 +1,12 @@
 [alone]
-outputs = ["LG Display"]
+outputs = ["Sharp Corporation 0x1516"]
 
 [home]
-outputs = [ "DP-3", "LG Display" ]
+outputs = [ "DP-3", "Sharp Corporation 0x1516" ]
 
 [office]
-outputs = [ "DP-5", "DP-6" ]
+outputs = [ "Dell Inc. DELL P2421", "Dell Inc. DELL U2713HM" ]
 
 [tv]
-outputs = [ "LG Display", "HDMI-A-2" ]
+outputs = [ "Sharp Corporation 0x1516", "HDMI-A-2" ]
 

@@ -128,18 +128,26 @@ impl Outputs {
             .map(|model| {
                 self.get_name_from_model(model)
                     .map(|n| n.to_string())
-                    .ok_or_else(|| color_eyre::eyre::eyre!("Failed to find name of '{}'", model))
+                    .ok_or_else(|| {
+                        color_eyre::eyre::eyre!(
+                            "Failed to find name of '{}'",
+                            model
+                        )
+                    })
             })
             .collect::<Result<Vec<_>>>()?;
         self.set(&names)
     }
 
     pub fn set(&self, setup: &[String]) -> Result<()> {
-        let setup: Vec<String> = setup.iter().map(|s| s.to_lowercase()).collect();
+        let setup: Vec<String> =
+            setup.iter().map(|s| s.to_lowercase()).collect();
         let desired: Outputs = setup
             .iter()
             .filter_map(|s| {
-                if let Some(o) = self.iter().find(|o| o.name().to_lowercase() == *s) {
+                if let Some(o) =
+                    self.iter().find(|o| o.name().to_lowercase() == *s)
+                {
                     Some(o)
                 } else {
                     println!("Display {} not connected", s);
@@ -165,7 +173,8 @@ impl Outputs {
 
         let mut last_x = 0;
         for (output, mode) in desired.iter().zip(desired_modes) {
-            let (width, height) = mode.map(|m| (m.width, m.height)).unwrap_or((0, 0));
+            let (width, height) =
+                mode.map(|m| (m.width, m.height)).unwrap_or((0, 0));
             let payload = format!(
                 "output {} enable position {} 0 resolution {}x{}",
                 output.name(),
