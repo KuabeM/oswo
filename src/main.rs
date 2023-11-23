@@ -45,6 +45,13 @@ enum Cmds {
         )]
         cfg_file: PathBuf,
     },
+    /// Print all pre-defined configurations.
+    #[command(alias = "p")]
+    Print {
+        /// Path to toml file containing predefined configurations.
+        #[arg(short, long, default_value = "~/.config/oswo.toml")]
+        cfg_file: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -63,6 +70,10 @@ fn main() -> Result<()> {
                 eyre::eyre!("Found no setup for '{}'", config)
             })?;
             outputs.set_models(desired_outputs)?;
+        }
+        Cmds::Print { cfg_file } => {
+            let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
+            println!("{:?}", cfgs);
         }
     }
 
