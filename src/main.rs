@@ -38,11 +38,7 @@ enum Cmds {
         /// Name of predefined configuration.
         config: String,
         /// Path to toml file containing predefined configurations.
-        #[arg(
-            short,
-            long,
-            default_value = "/home/korbinian/.config/oswo.toml"
-        )]
+        #[arg(short, long, default_value = "/home/korbinian/.config/oswo.toml")]
         cfg_file: PathBuf,
     },
     /// Print all pre-defined configurations.
@@ -64,12 +60,11 @@ fn main() -> Result<()> {
         Cmds::Display => println!("{:#}", outputs),
         Cmds::Set { setup } => outputs.set(&setup)?,
         Cmds::Use { config, cfg_file } => {
-            let cfgs = cfg::Cfgs::from_file(cfg_file)
-                .wrap_err("Failed to load configuration")?;
-            let desired_outputs = cfgs.find(&config).ok_or_else(|| {
-                eyre::eyre!("Found no setup for '{}'", config)
-            })?;
-            outputs.set_models(desired_outputs)?;
+            let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
+            let desired_outputs = cfgs
+                .find(&config)
+                .ok_or_else(|| eyre::eyre!("Found no setup for '{}'", config))?;
+            outputs.set_models(&desired_outputs[..])?;
         }
         Cmds::Print { cfg_file } => {
             let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
