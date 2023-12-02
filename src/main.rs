@@ -37,16 +37,16 @@ enum Cmds {
     Use {
         /// Name of predefined configuration.
         config: String,
-        /// Path to toml file containing predefined configurations.
-        #[arg(short, long, default_value = "/home/korbinian/.config/oswo.toml")]
-        cfg_file: PathBuf,
+        /// Path to toml file containing predefined configurations. [$XDG_CONFIG_DIR/oswo.toml]
+        #[arg(short, long)]
+        cfg_file: Option<PathBuf>,
     },
     /// Print all pre-defined configurations.
     #[command(alias = "p")]
     Print {
-        /// Path to toml file containing predefined configurations.
-        #[arg(short, long, default_value = "~/.config/oswo.toml")]
-        cfg_file: PathBuf,
+        /// Path to toml file containing predefined configurations. [$XDG_CONFIG_DIR/oswo.toml]
+        #[arg(short, long)]
+        cfg_file: Option<PathBuf>,
     },
 }
 
@@ -54,20 +54,25 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
 
+    let default_cfg = dirs::config_dir()
+        .unwrap_or("/etc/xdg/".into())
+        .join("oswo.toml");
     let outputs = outputs::Outputs::list()?;
     match args.cmds {
         Cmds::Display if args.verbose == 0 => println!("{}", outputs),
         Cmds::Display => println!("{:#}", outputs),
-        Cmds::Set { setup } => outputs.set(&setup)?,
+        Cmds::Set { setup } => outputs.set_by_name(&setup)?,
         Cmds::Use { config, cfg_file } => {
-            let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
+            let cfg = cfg_file.unwrap_or(default_cfg);
+            let cfgs = cfg::Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
             let desired_outputs = cfgs
                 .find(&config)
                 .ok_or_else(|| eyre::eyre!("Found no setup for '{}'", config))?;
             outputs.set_models(&desired_outputs[..])?;
         }
         Cmds::Print { cfg_file } => {
-            let cfgs = cfg::Cfgs::from_file(cfg_file).wrap_err("Failed to load configuration")?;
+            let cfg = cfg_file.unwrap_or(default_cfg);
+            let cfgs = cfg::Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
             println!("{:?}", cfgs);
         }
     }
