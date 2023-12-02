@@ -10,10 +10,17 @@ struct Outputs {
     pub outputs: Vec<DesiredOutput>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct DesiredOutput {
     pub name: String,
     pub scale: Option<f64>,
+}
+
+// TODO: allow name + scale and name only
+#[derive(Debug, Deserialize)]
+enum OutputVariants {
+    Full(DesiredOutput),
+    Name(String),
 }
 
 impl TryFrom<toml::Table> for Cfgs {
