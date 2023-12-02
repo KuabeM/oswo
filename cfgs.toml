@@ -1,12 +1,12 @@
 [alone]
 outputs = [
-    { name = "Sharp Corporation 0x1516", scale = 1.0}
+    { name = "LG Display 0x058B", scale = 1.5 }
 ]
 
 [home]
 outputs = [
-    { name = "DP-3", scale = 1.0 },
-    { name = "Sharp Corporation 0x1516", scale = 1.0 }
+    { name = "Dell Inc. DELL P2723DE", scale = 1.0 },
+    { name = "LG Display 0x058B", scale = 1.5 },
 ]
 
 [office]
@@ -15,6 +15,8 @@ outputs = [
     { name = "Dell Inc. DELL U2713HM", scale = 1.0 }
 ]
 
-# [tv]
-# outputs = [ "Sharp Corporation 0x1516", "HDMI-A-2" ]
-
+[tv]
+outputs = [
+    { name = "LG Display 0x058B", scale = 1.5},
+    { name = "Dell Inc. DELL U2713HM", scale = 1.0 }
+]
