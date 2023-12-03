@@ -64,3 +64,22 @@ impl Cfgs {
         self.0.get(key)
     }
 }
+
+impl std::fmt::Display for Cfgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.iter().try_fold((), |_, (name, setup)| {
+            let setup_str = setup
+                .iter()
+                .map(|o| format!("{}", o))
+                .collect::<Vec<_>>()
+                .join("\n  ");
+            write!(f, "{}:\n  {}\n", name, setup_str)
+        })
+    }
+}
+
+impl std::fmt::Display for DesiredOutput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} (scale: {})", self.name, self.scale.unwrap_or(1.0))
+    }
+}

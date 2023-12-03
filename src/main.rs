@@ -73,7 +73,7 @@ fn main() -> Result<()> {
         Cmds::Print { cfg_file } => {
             let cfg = cfg_file.unwrap_or(default_cfg);
             let cfgs = cfg::Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
-            println!("{:?}", cfgs);
+            println!("{}", cfgs);
         }
     }
 
