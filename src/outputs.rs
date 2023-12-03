@@ -140,41 +140,34 @@ impl Outputs {
     }
 
     pub fn set_models(&self, setup: &[DesiredOutput]) -> Result<()> {
-        let missing_outputs: Vec<_> = setup
+        let disable: Vec<Output> = self
+            .0
             .iter()
-            .filter_map(|s| {
-                if !self
-                    .iter()
-                    .any(|o| s.name.to_lowercase().contains(&o.model.to_lowercase()))
-                {
-                    Some(s.name.clone())
+            .filter_map(|o| {
+                if !setup.iter().any(|d| d.name == o.model) {
+                    Some(o.clone().disabled())
                 } else {
                     None
                 }
             })
             .collect();
-        if !missing_outputs.is_empty() {
-            let plural = if missing_outputs.len() > 1 { "s" } else { "" };
-            color_eyre::eyre::bail!(
-                "Display{} {} not connected",
-                plural,
-                missing_outputs.join(", ")
-            );
-        }
 
-        let new_setup: Vec<Output> = self
-            .0
+        let new_setup: Result<Vec<Output>> = setup
             .iter()
-            .map(|o| {
-                let new_o = if let Some(desired) = setup.iter().find(|d| d.name == o.model) {
-                    o.clone().enabled().with_scale(desired.scale.unwrap_or(1.0))
-                } else {
-                    o.clone().disabled()
-                };
-                new_o
+            .map(|desired| {
+                self.0
+                    .iter()
+                    .find(|o| o.model == desired.name)
+                    .ok_or(color_eyre::eyre::eyre!(
+                        "Display '{}' is not connected",
+                        desired.name
+                    ))
+                    .map(|o| o.clone().enabled().with_scale(desired.scale.unwrap_or(1.0)))
             })
             .collect();
-        self.set(new_setup.iter())
+        let new_setup = new_setup?;
+        self.set(new_setup.iter())?;
+        self.set(disable.iter())
     }
 
     pub fn set_by_name(&self, setup: &[String]) -> Result<()> {
