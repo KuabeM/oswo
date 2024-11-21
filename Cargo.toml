@@ -1,9 +1,11 @@
 [package]
 name = "oswo"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Organize your sway outputs"
+repository = "https://github.com/kuabem/oswo"
+homepage = "https://github.com/kuabem/oswo"
+license = "MIT"
 
 [dependencies]
 clap = { version = "4.1.13", features = [ "derive" ] }
