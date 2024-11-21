@@ -200,7 +200,8 @@ impl Outputs {
                     height,
                     o.scale
                 );
-                last_x += width;
+                let scaled_w = width as f64 / o.scale;
+                last_x += scaled_w as i32;
                 payload
             } else {
                 format!("output {} disable", o.name())
