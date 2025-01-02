@@ -6,8 +6,7 @@ use color_eyre::{
     Result,
 };
 
-mod cfg;
-mod outputs;
+use liboswo::{Cfgs, Outputs};
 
 /// Organise sway outputs (oswo).
 #[derive(Parser, Debug)]
@@ -57,14 +56,14 @@ fn main() -> Result<()> {
     let default_cfg = dirs::config_dir()
         .unwrap_or("/etc/xdg/".into())
         .join("oswo.toml");
-    let outputs = outputs::Outputs::list()?;
+    let outputs = Outputs::list()?;
     match args.cmds {
         Cmds::Display if args.verbose == 0 => println!("{}", outputs),
         Cmds::Display => println!("{:#}", outputs),
         Cmds::Set { setup } => outputs.set_by_name(&setup)?,
         Cmds::Use { config, cfg_file } => {
             let cfg = cfg_file.unwrap_or(default_cfg);
-            let cfgs = cfg::Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
+            let cfgs = Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
             let desired_outputs = cfgs
                 .find(&config)
                 .ok_or_else(|| eyre::eyre!("Found no setup for '{}'", config))?;
@@ -72,7 +71,7 @@ fn main() -> Result<()> {
         }
         Cmds::Print { cfg_file } => {
             let cfg = cfg_file.unwrap_or(default_cfg);
-            let cfgs = cfg::Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
+            let cfgs = Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
             println!("{}", cfgs);
         }
     }

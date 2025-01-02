@@ -11,6 +11,20 @@ license = "MIT"
 clap = { version = "4.1.13", features = [ "derive" ] }
 color-eyre = "0.6.2"
 dirs = "5"
+env_logger = "0.11.6"
+log = "0.4.22"
 serde = "1.0.159"
-swayipc = "3.0.1"
+swayipc = "3.0.3"
 toml_edit = { version = "0.21.0", features = [ "serde" ] }
+
+[lib]
+name = "liboswo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oswo"
+path = "src/main.rs"
+
+[[bin]]
+name = "oswod"
+path = "src/daemon.rs"
