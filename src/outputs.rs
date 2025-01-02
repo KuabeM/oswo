@@ -1,11 +1,14 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    collections::BTreeSet,
+    ops::{Deref, DerefMut},
+};
 
 use color_eyre::Result;
 use swayipc::{Connection, Mode};
 
 use crate::cfg::DesiredOutput;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Output {
     name: String,
     model: String,
@@ -40,6 +43,10 @@ impl Output {
 
     pub fn name(&self) -> &str {
         self.name.as_ref()
+    }
+
+    pub fn model(&self) -> &str {
+        self.model.as_ref()
     }
 
     pub fn enabled(self) -> Self {
@@ -102,8 +109,28 @@ impl std::fmt::Display for Output {
     }
 }
 
+impl PartialOrd for Output {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Output {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.model.cmp(&other.model)
+    }
+}
+
+impl PartialEq for Output {
+    fn eq(&self, other: &Self) -> bool {
+        self.model == other.model
+    }
+}
+
+impl Eq for Output {}
+
 #[derive(Debug, PartialEq)]
-pub struct Outputs(Vec<Output>);
+pub struct Outputs(BTreeSet<Output>);
 
 impl Outputs {
     pub fn list() -> Result<Self> {
@@ -206,7 +233,7 @@ impl Outputs {
             } else {
                 format!("output {} disable", o.name())
             };
-            println!("{}", payload);
+            // println!("{}", payload);
             cmd_con.run_command(payload)?;
         }
 
@@ -225,7 +252,7 @@ impl std::fmt::Display for Outputs {
 }
 
 impl Deref for Outputs {
-    type Target = Vec<Output>;
+    type Target = BTreeSet<Output>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -240,9 +267,9 @@ impl DerefMut for Outputs {
 
 impl<'a> FromIterator<&'a Output> for Outputs {
     fn from_iter<T: IntoIterator<Item = &'a Output>>(iter: T) -> Self {
-        let mut vec: Vec<Output> = Vec::new();
+        let mut vec: BTreeSet<Output> = BTreeSet::new();
         for n in iter {
-            vec.push(n.clone());
+            vec.insert(n.clone());
         }
 
         Self(vec)

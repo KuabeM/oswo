@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0 - UNRELEASED
+
+* add a daemon `oswod` that listens for output events and applies a suitable config
+
 ## 1.1.1 - 21/11/2024
 
 * account for scaled outputs when calculating position of outputs
