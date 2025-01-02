@@ -13,12 +13,26 @@ struct Args {
     /// Path to toml file containing predefined configurations. [$XDG_CONFIG_DIR/oswo.toml]
     #[arg(short, long)]
     cfg_file: Option<PathBuf>,
+    /// Forward log messages to syslog.
+    #[arg(short, long)]
+    syslog: bool,
 }
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
-    env_logger::init();
+
+    if args.syslog {
+        syslog::init(
+            syslog::Facility::LOG_USER,
+            log::LevelFilter::Info,
+            Some(env!("CARGO_PKG_NAME")),
+        )?;
+    } else {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+            .format_timestamp(None)
+            .init();
+    }
 
     let cfg = args.cfg_file.unwrap_or(Cfgs::default_path());
     let cfgs = Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
