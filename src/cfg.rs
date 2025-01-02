@@ -1,6 +1,10 @@
 use color_eyre::{eyre::Context, Result};
 use serde::Deserialize;
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct Cfgs(HashMap<String, Vec<DesiredOutput>>);
@@ -10,6 +14,14 @@ struct Outputs {
     pub outputs: Vec<DesiredOutput>,
 }
 
+impl Deref for Cfgs {
+    type Target = HashMap<String, Vec<DesiredOutput>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct DesiredOutput {
     pub name: String,
@@ -17,11 +29,11 @@ pub struct DesiredOutput {
 }
 
 // TODO: allow name + scale and name only
-#[derive(Debug, Deserialize)]
-enum OutputVariants {
-    Full(DesiredOutput),
-    Name(String),
-}
+// #[derive(Debug, Deserialize)]
+// enum OutputVariants {
+//     Full(DesiredOutput),
+//     Name(String),
+// }
 
 impl TryFrom<&toml_edit::Table> for Cfgs {
     type Error = color_eyre::Report;
@@ -62,6 +74,12 @@ impl Cfgs {
 
     pub fn find(&self, key: &str) -> Option<&Vec<DesiredOutput>> {
         self.0.get(key)
+    }
+
+    pub fn default_path() -> PathBuf {
+        dirs::config_dir()
+            .unwrap_or("/etc/xdg/".into())
+            .join("oswo.toml")
     }
 }
 
