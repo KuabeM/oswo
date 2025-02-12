@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 - UNRELEASED
+## 2.0.0 - 12/02/2025
 
 * add a daemon `oswod` that listens for output events and applies a suitable config
 
