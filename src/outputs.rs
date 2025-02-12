@@ -4,9 +4,10 @@ use std::{
 };
 
 use color_eyre::Result;
+use log::{info, trace};
 use swayipc::{Connection, Mode};
 
-use crate::cfg::DesiredOutput;
+use crate::{cfg::DesiredOutput, Cfgs};
 
 #[derive(Debug, Clone, Default)]
 pub struct Output {
@@ -237,6 +238,26 @@ impl Outputs {
             cmd_con.run_command(payload)?;
         }
 
+        Ok(())
+    }
+
+    pub fn activate_config(&self, cfgs: &Cfgs) -> Result<()> {
+        let connected_names: BTreeSet<String> =
+            self.iter().map(|o| o.model().to_string()).collect();
+        trace!("connected displays: {:?}", connected_names);
+        let mut valid_cfgs = Vec::new();
+        for (k, v) in cfgs.iter() {
+            let names: BTreeSet<_> = v.iter().map(|d| d.name.clone()).collect();
+            if names.is_subset(&connected_names) {
+                valid_cfgs.push((k, v));
+            }
+        }
+        valid_cfgs.sort_by_key(|a| a.1.len());
+        trace!("relevant cfgs: {:?}", valid_cfgs);
+        if let Some(best_cfg) = valid_cfgs.last() {
+            info!("activating config '{}'", best_cfg.0);
+            self.set_models(best_cfg.1)?;
+        }
         Ok(())
     }
 }
