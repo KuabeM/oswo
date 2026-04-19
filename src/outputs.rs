@@ -7,7 +7,7 @@ use color_eyre::Result;
 use log::{info, trace};
 use swayipc::{Connection, Mode};
 
-use crate::{cfg::DesiredOutput, Cfgs};
+use crate::cfg::{Cfgs, Config, DesiredOutput};
 
 #[derive(Debug, Clone, Default)]
 pub struct Output {
@@ -245,18 +245,30 @@ impl Outputs {
         let connected_names: BTreeSet<String> =
             self.iter().map(|o| o.model().to_string()).collect();
         trace!("connected displays: {:?}", connected_names);
-        let mut valid_cfgs = Vec::new();
+        // collect configs where all required outputs are connected
+        let mut valid_cfgs: Vec<(&String, &Config)> = Vec::new();
         for (k, v) in cfgs.iter() {
-            let names: BTreeSet<_> = v.iter().map(|d| d.name.clone()).collect();
+            let names: BTreeSet<_> = v.outputs.iter().map(|d| d.name.clone()).collect();
             if names.is_subset(&connected_names) {
                 valid_cfgs.push((k, v));
             }
         }
-        valid_cfgs.sort_by_key(|a| a.1.len());
+
+        // Sort ascending so last() is the best: priority (higher wins), then number of outputs (bigger wins)
+        valid_cfgs.sort_by(|a, b| {
+            let pa = a.1.priority.unwrap_or(0);
+            let pb = b.1.priority.unwrap_or(0);
+            pa.cmp(&pb).then(a.1.outputs.len().cmp(&b.1.outputs.len()))
+        });
+
         trace!("relevant cfgs: {:?}", valid_cfgs);
-        if let Some(best_cfg) = valid_cfgs.last() {
-            info!("activating config '{}'", best_cfg.0);
-            self.set_models(best_cfg.1)?;
+        if let Some((name, best_cfg)) = valid_cfgs.last() {
+            info!(
+                "activating config '{}' (priority: {})",
+                name,
+                best_cfg.priority.unwrap_or(0)
+            );
+            self.set_models(&best_cfg.outputs)?;
         }
         Ok(())
     }

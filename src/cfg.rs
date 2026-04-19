@@ -7,25 +7,28 @@ use std::{
 };
 
 #[derive(Debug, Deserialize)]
-pub struct Cfgs(HashMap<String, Vec<DesiredOutput>>);
-
-#[derive(Debug, Deserialize)]
-struct Outputs {
-    pub outputs: Vec<DesiredOutput>,
-}
-
-impl Deref for Cfgs {
-    type Target = HashMap<String, Vec<DesiredOutput>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+pub struct Cfgs(HashMap<String, Config>);
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DesiredOutput {
     pub name: String,
     pub scale: Option<f64>,
+}
+
+/// Config describes a named configuration: outputs plus optional priority
+#[derive(Debug, Deserialize, Clone)]
+pub struct Config {
+    pub outputs: Vec<DesiredOutput>,
+    /// higher number -> higher priority; optional for backwards compatibility
+    pub priority: Option<i64>,
+}
+
+impl Deref for Cfgs {
+    type Target = HashMap<String, Config>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 // TODO: allow name + scale and name only
@@ -39,14 +42,14 @@ impl TryFrom<&toml_edit::Table> for Cfgs {
     type Error = color_eyre::Report;
 
     fn try_from(table: &toml_edit::Table) -> std::result::Result<Self, Self::Error> {
-        let cfg: Result<HashMap<String, Vec<DesiredOutput>>> = table
+        let cfg: Result<HashMap<String, Config>> = table
             .into_iter()
             .map(|(name, inner)| {
-                let output_str = inner
+                let section_str = inner
                     .as_table()
                     .map(|t| t.to_string())
                     .unwrap_or(inner.as_str().unwrap_or("").to_string());
-                let out: Outputs = toml_edit::de::from_str(&output_str).wrap_err_with(|| {
+                let cfg_entry: Config = toml_edit::de::from_str(&section_str).wrap_err_with(|| {
                     format!(
                         "Missing outputs in configuration {}: {}",
                         &name,
@@ -54,7 +57,7 @@ impl TryFrom<&toml_edit::Table> for Cfgs {
                     )
                 })?;
                 let name = name.to_string();
-                Ok((name, out.outputs))
+                Ok((name, cfg_entry))
             })
             .collect();
         Ok(Cfgs(cfg?))
@@ -72,7 +75,8 @@ impl Cfgs {
         Self::try_from(cfgs)
     }
 
-    pub fn find(&self, key: &str) -> Option<&Vec<DesiredOutput>> {
+    /// Return the Config for a named configuration (if present)
+    pub fn find(&self, key: &str) -> Option<&Config> {
         self.0.get(key)
     }
 
@@ -85,13 +89,15 @@ impl Cfgs {
 
 impl std::fmt::Display for Cfgs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.iter().try_fold((), |_, (name, setup)| {
-            let setup_str = setup
+        self.0.iter().try_fold((), |_, (name, cfg)| {
+            let setup_str = cfg
+                .outputs
                 .iter()
                 .map(|o| format!("{}", o))
                 .collect::<Vec<_>>()
                 .join("\n  ");
-            write!(f, "{}:\n  {}\n", name, setup_str)
+            let priority_str = cfg.priority.map(|p| format!(" (priority: {})", p)).unwrap_or_default();
+            write!(f, "{}{}:\n  {}\n", name, priority_str, setup_str)
         })
     }
 }
@@ -99,5 +105,25 @@ impl std::fmt::Display for Cfgs {
 impl std::fmt::Display for DesiredOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} (scale: {})", self.name, self.scale.unwrap_or(1.0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_priority() {
+        let s = r#"
+        [a]
+        outputs = [{ name = "Foo", scale = 1.0 }]
+        priority = 5
+        "#;
+        let doc: toml_edit::Document = s.parse().unwrap();
+        let cfgs = Cfgs::try_from(doc.as_table()).unwrap();
+        let cfg = cfgs.find("a").expect("config 'a' present");
+        assert_eq!(cfg.priority.unwrap(), 5);
+        assert_eq!(cfg.outputs.len(), 1);
+        assert_eq!(cfg.outputs[0].name, "Foo");
     }
 }

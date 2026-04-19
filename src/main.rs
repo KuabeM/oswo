@@ -64,10 +64,10 @@ fn main() -> Result<()> {
         Cmds::Use { config, cfg_file } => {
             let cfg = cfg_file.unwrap_or(default_cfg);
             let cfgs = Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
-            let desired_outputs = cfgs
+            let cfg_entry = cfgs
                 .find(&config)
                 .ok_or_else(|| eyre::eyre!("Found no setup for '{}'", config))?;
-            outputs.set_models(&desired_outputs[..])?;
+            outputs.set_models(&cfg_entry.outputs)?;
         }
         Cmds::Print { cfg_file } => {
             let cfg = cfg_file.unwrap_or(default_cfg);
