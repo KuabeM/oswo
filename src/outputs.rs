@@ -50,7 +50,7 @@ impl Output {
         self.model.as_ref()
     }
 
-    pub fn enabled(self) -> Self {
+    pub fn enable(self) -> Self {
         Self {
             enabled: true,
             ..self
@@ -61,7 +61,7 @@ impl Output {
         Self { scale, ..self }
     }
 
-    pub fn disabled(self) -> Self {
+    pub fn disable(self) -> Self {
         Self {
             enabled: false,
             ..self
@@ -100,6 +100,14 @@ impl Output {
         self.modes
             .iter()
             .max_by_key(|mode| mode.width * mode.height)
+    }
+
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn scale(&self) -> f64 {
+        self.scale
     }
 }
 
@@ -173,7 +181,7 @@ impl Outputs {
             .iter()
             .filter_map(|o| {
                 if !setup.iter().any(|d| d.name == o.model) {
-                    Some(o.clone().disabled())
+                    Some(o.clone().disable())
                 } else {
                     None
                 }
@@ -190,7 +198,7 @@ impl Outputs {
                         "Display '{}' is not connected",
                         desired.name
                     ))
-                    .map(|o| o.clone().enabled().with_scale(desired.scale.unwrap_or(1.0)))
+                    .map(|o| o.clone().enable().with_scale(desired.scale.unwrap_or(1.0)))
             })
             .collect();
         let new_setup = new_setup?;
@@ -204,9 +212,9 @@ impl Outputs {
             .iter()
             .map(|o| {
                 if setup.iter().any(|desired| **desired == o.name) {
-                    o.clone().enabled()
+                    o.clone().enable()
                 } else {
-                    o.clone().disabled()
+                    o.clone().disable()
                 }
             })
             .collect();
