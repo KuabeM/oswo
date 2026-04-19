@@ -7,6 +7,7 @@ use color_eyre::{
 };
 
 use liboswo::{Cfgs, Outputs};
+use log::info;
 
 /// Organise sway outputs (oswo).
 #[derive(Parser, Debug)]
@@ -47,6 +48,14 @@ enum Cmds {
         #[arg(short, long)]
         cfg_file: Option<PathBuf>,
     },
+    /// Add the current configuration to the config file.
+    #[command(alias = "a")]
+    Add {
+        name: String,
+        /// Path to toml file to add the configuration. [$XDG_CONFIG_DIR/oswo.toml]
+        #[arg(short, long)]
+        cfg_file: Option<PathBuf>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -73,6 +82,13 @@ fn main() -> Result<()> {
             let cfg = cfg_file.unwrap_or(default_cfg);
             let cfgs = Cfgs::from_file(cfg).wrap_err("Failed to load configuration")?;
             println!("{}", cfgs);
+        }
+        Cmds::Add { name, cfg_file } => {
+            let cfg = cfg_file.unwrap_or(default_cfg);
+            let mut cfgs = Cfgs::from_file(&cfg).wrap_err("Failed to load configuration")?;
+            cfgs.add(&name, &outputs)?;
+            cfgs.save(&cfg).wrap_err("Failed to write configuration")?;
+            info!("Wrote configuration to {}", cfg.display());
         }
     }
 
