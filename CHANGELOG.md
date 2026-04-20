@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0 - 20/04/2026
+
+* add command to add current monitor setup to config file
+* add priority to setups
+
 ## 2.0.0 - 12/02/2025
 
 * add a daemon `oswod` that listens for output events and applies a suitable config
