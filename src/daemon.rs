@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{command, Parser};
+use clap::Parser;
 use color_eyre::{eyre::Context, Result};
 use log::{info, trace};
 use swayipc::{Connection, Event, EventType};
